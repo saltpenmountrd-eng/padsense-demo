@@ -24,10 +24,10 @@ public Q_SLOTS:
     void ExitTimer() { m_ExitTimer->stop(); close(); }
     void ModifyParameters();
     void ReFindPMDevice();
-    void PadSenseSlot(quint8, quint8, quint8);
+    void PadSenseSlot(quint8, quint8, quint8, quint16, quint16);
 
 Q_SIGNALS:
-    void PadSenseSignal(quint8, quint8, quint8);
+    void PadSenseSignal(quint8, quint8, quint8, quint16, quint16);
 
 protected:
     void keyReleaseEvent(QKeyEvent *event);

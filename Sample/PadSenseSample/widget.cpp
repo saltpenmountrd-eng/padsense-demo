@@ -29,11 +29,11 @@ typedef qint32 (* pFnStartTouchThread)(Qt::HANDLE hDevice);
 // Stop Touch Thread for Linux
 typedef qint32 (* pFnStopTouchThread)(Qt::HANDLE hDevice);
 
-qint32 PadSenseCallBack(quint8 byHead, quint16, quint16, quint8 byStatus, Qt::HANDLE hDevice)
+qint32 PadSenseCallBack(quint8 byHead, quint16 wXPosition, quint16 wYPosition, quint8 byStatus, Qt::HANDLE hDevice)
 {
     // Valid handle or not
     quint8 byValid = (hDevice == INVALID_HANDLE_VALUE) ? 0 : 1;
-    emit g_Widget->PadSenseSignal(byHead, byStatus, byValid);
+    emit g_Widget->PadSenseSignal(byHead, byStatus, byValid, wXPosition, wYPosition);
     return 1;
 }
 
@@ -50,15 +50,15 @@ Widget::Widget(QWidget *parent) :
     m_ExitTimer  = new QTimer(this);
     connect(m_ExitTimer , SIGNAL(timeout()), this, SLOT(ExitTimer()));
 
-    connect(this, SIGNAL(PadSenseSignal(quint8, quint8, quint8)), this, SLOT(PadSenseSlot(quint8, quint8, quint8)));
+    connect(this, SIGNAL(PadSenseSignal(quint8, quint8, quint8, quint16, quint16)), this, SLOT(PadSenseSlot(quint8, quint8, quint8, quint16, quint16)));
 
     connect(ui->pushButton, SIGNAL(clicked()), this, SLOT(ModifyParameters()));
     connect(ui->pushButton_2, SIGNAL(clicked()), this, SLOT(ReFindPMDevice()));
 
     // Initial Table View
-    QStandardItemModel *model1 = new QStandardItemModel(10, 1, this);
+    QStandardItemModel *model1 = new QStandardItemModel(10, 3, this);
     QStringList szLabel;
-    szLabel << "State";
+    szLabel << "State" << "X" << "Y";
     model1->setHorizontalHeaderLabels(szLabel);
     szLabel.clear();
     szLabel << "Finger 1" << "Finger 2" << "Finger 3" << "Finger 4" << "Finger 5" << "Finger 6" << "Finger 7" << "Finger 8" << "Finger 9" << "Finger 10";
@@ -196,7 +196,7 @@ void Widget::ReFindPMDevice()
     }
 }
 
-void Widget::PadSenseSlot(quint8 byHead, quint8 byStatus, quint8 byValid)
+void Widget::PadSenseSlot(quint8 byHead, quint8 byStatus, quint8 byValid, quint16 wXPosition, quint16 wYPosition)
 {
     if (byValid == 0) {
         // Invalid handle : Call Find Hid USB PenMount Device API
@@ -210,11 +210,13 @@ void Widget::PadSenseSlot(quint8 byHead, quint8 byStatus, quint8 byValid)
         // Check Head type (Pen Down or Pen Up)
         quint8 byDownUp = (byHead & 0xF0);
         if (byDownUp == 0x10 || byDownUp == 0x20) {
-            // Show status from byStatus and touch index
+            // Show status, X and Y position for this finger
             const static QString szStatusList[5] = { QString("Up"), QString("Down"), QString("Press"), QString("Rise"), QString("Heavy") };
             QStandardItemModel *model = (QStandardItemModel *)ui->tableView->model();
             quint8 byIndex = (byHead & 0x0F);
             model->setItem(byIndex, 0, new QStandardItem(szStatusList[byStatus]));
+            model->setItem(byIndex, 1, new QStandardItem(QString::number(wXPosition)));
+            model->setItem(byIndex, 2, new QStandardItem(QString::number(wYPosition)));
         }
     }
 }
