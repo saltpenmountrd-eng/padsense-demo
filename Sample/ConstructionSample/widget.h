@@ -6,6 +6,8 @@
 #include <QKeyEvent>
 #include "machinewidget.h"
 
+class Widget;
+
 extern Widget *g_Widget;
 
 class Widget : public QWidget
