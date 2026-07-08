@@ -1,10 +1,13 @@
 #pragma once
 #include <QWidget>
+#include <QCheckBox>
 #include <QLabel>
 #include <QLibrary>
 #include <QTimer>
 #include <QKeyEvent>
 #include "machinewidget.h"
+
+class Widget;
 
 extern Widget *g_Widget;
 
@@ -43,6 +46,7 @@ private:
     QLabel *m_titleLabel;
     QLabel *m_finger1Label;
     QLabel *m_finger2Label;
+    QCheckBox *m_simultaneousCheckBox;
     QLabel *m_instructionLabel;
     QLabel *m_escLabel;
 

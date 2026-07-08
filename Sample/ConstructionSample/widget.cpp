@@ -52,6 +52,11 @@ Widget::Widget(QWidget *parent)
     m_finger1Label->setWordWrap(true);
     m_finger2Label->setWordWrap(true);
 
+    m_simultaneousCheckBox = new QCheckBox(
+        QString::fromUtf8("同步雙指模式（取消勾選：第一指→第二指）"), this);
+    m_simultaneousCheckBox->setStyleSheet(
+        "font-size: 13px; color: #555555; padding: 4px;");
+
     QLabel *slotTitle = new QLabel(QString::fromUtf8("手指狀態"), this);
     slotTitle->setAlignment(Qt::AlignCenter);
     slotTitle->setStyleSheet(
@@ -64,6 +69,7 @@ Widget::Widget(QWidget *parent)
     leftLayout->addWidget(slotTitle);
     leftLayout->addWidget(m_finger1Label);
     leftLayout->addWidget(m_finger2Label);
+    leftLayout->addWidget(m_simultaneousCheckBox);
     leftLayout->addStretch();
 
     QFrame *leftPanel = new QFrame(this);
@@ -113,6 +119,15 @@ Widget::Widget(QWidget *parent)
             SIGNAL(PadSenseSignal(quint8, quint8, quint8, quint16, quint16)),
             this,
             SLOT(PadSenseSlot(quint8, quint8, quint8, quint16, quint16)));
+    connect(m_simultaneousCheckBox, &QCheckBox::toggled, this, [this]() {
+        m_finger1 = -1;
+        m_finger2 = -1;
+        for (int i = 0; i < 10; ++i) {
+            m_fingerDown[i] = false;
+            m_fingerHeavy[i] = false;
+        }
+        updateMachineState();
+    });
 
     // ── Initial UI state ───────────────────────────────────────────────────
     applySlotStyle(m_finger1Label, 0);
@@ -212,11 +227,29 @@ void Widget::PadSenseSlot(quint8 byHead, quint8 byStatus, quint8 byValid,
 
         if (byStatus == 4) {
             m_fingerHeavy[idx] = true;
-            // Assign to slots in order of arrival
+            if (!m_simultaneousCheckBox->isChecked()) {
+                // Assign to slots in order of heavy-press arrival.
+                if (m_finger1 == -1) {
+                    m_finger1 = idx;
+                } else if (m_finger2 == -1 && idx != m_finger1) {
+                    m_finger2 = idx;
+                }
+            }
+        }
+    }
+
+    if (m_simultaneousCheckBox->isChecked()) {
+        // In simultaneous mode, the two slots represent the first two fingers
+        // that are currently down and heavy at the same time.
+        m_finger1 = -1;
+        m_finger2 = -1;
+        for (int i = 0; i < 10; ++i) {
+            if (!m_fingerDown[i] || !m_fingerHeavy[i]) continue;
             if (m_finger1 == -1) {
-                m_finger1 = idx;
-            } else if (m_finger2 == -1 && idx != m_finger1) {
-                m_finger2 = idx;
+                m_finger1 = i;
+            } else if (m_finger2 == -1) {
+                m_finger2 = i;
+                break;
             }
         }
     }
@@ -249,8 +282,13 @@ void Widget::updateMachineState()
             "font-size: 16px; padding: 8px;"
             "background: #fff8e1; border: 2px solid #ffa000; border-radius: 6px;"
             "color: #e65100;");
-        m_instructionLabel->setText(
-            QString::fromUtf8("第一指已確認 ✓　步驟 2／2：請用第二根手指重壓觸控板"));
+        if (m_simultaneousCheckBox->isChecked()) {
+            m_instructionLabel->setText(
+                QString::fromUtf8("同步雙指模式：偵測到一指重壓，請保持並讓第二指同時重壓"));
+        } else {
+            m_instructionLabel->setText(
+                QString::fromUtf8("第一指已確認 ✓　步驟 2／2：請用第二根手指重壓觸控板"));
+        }
     } else {
         // Idle
         m_machineWidget->setMachineState(0);
@@ -258,7 +296,9 @@ void Widget::updateMachineState()
             "font-size: 16px; padding: 8px; background: #ffffff;"
             "border: 1px solid #cccccc; border-radius: 6px; color: #333333;");
         m_instructionLabel->setText(
-            QString::fromUtf8("步驟 1／2：請用第一根手指重壓觸控板，達到「重壓確認」狀態"));
+            m_simultaneousCheckBox->isChecked()
+                ? QString::fromUtf8("同步雙指模式：請用兩根手指同時重壓觸控板")
+                : QString::fromUtf8("步驟 1／2：請用第一根手指重壓觸控板，達到「重壓確認」狀態"));
     }
 }
 
