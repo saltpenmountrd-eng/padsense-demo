@@ -6,6 +6,9 @@
 #include <QLibrary>
 #include <QKeyEvent>
 
+class Widget;
+extern Widget *g_Widget;
+
 namespace Ui {
 class Widget;
 }
